@@ -14,6 +14,9 @@ example: ## Run the example web app with sample data
 	@uv run example.py
 
 
+install-pre-commit: ## Install pre-commit hooks
+	@uv run pre-commit install
+
 pre-commit: ## Run pre-commit hooks on all files
 	@uv run pre-commit run --all-files
 
