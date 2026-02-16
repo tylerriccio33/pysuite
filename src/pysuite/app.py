@@ -39,6 +39,22 @@ def run(
         - table_data: List of dicts with predictions, actuals, residuals, and features
         - columns: Ordered list of column names
 
+    Examples
+    --------
+    >>> import polars as pl
+    >>> xeval = pl.DataFrame({"x": [float(i) for i in range(100)]})
+    >>> yeval = pl.Series([float(i) for i in range(100)])
+    >>> ypred = pl.Series([float(i) + 0.5 for i in range(100)])
+    >>> report = run(xeval, yeval, ypred)
+    >>> report["task_type"]
+    'regression'
+    >>> "MAE" in report["metrics"]
+    True
+    >>> len(report["table_data"]) == 100
+    True
+    >>> set(report["columns"]) == {"pred", "real", "resid", "x"}
+    True
+
     """
     # Detect task type
     task_type = detect_task_type(yeval)

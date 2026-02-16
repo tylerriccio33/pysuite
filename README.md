@@ -39,3 +39,11 @@ run(xeval, yeval, ypred, show=True)
 - **Optionally displays** a Flask web interface for viewing reports
 
 Works with Polars, Pandas, and other dataframe libraries via [narwhals](https://github.com/narwhals-dev/narwhals).
+
+## Testing
+
+Run doctests with pytest:
+
+```bash
+pytest --doctest-modules src/
+```
