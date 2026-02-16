@@ -1,5 +1,6 @@
 """Flask web application for model reporting."""
 
+import random
 from typing import Any
 
 import narwhals as nw
@@ -56,23 +57,39 @@ def run(
     True
 
     """
-    # Detect task type
-    task_type = detect_task_type(yeval)
-
-    # Calculate metrics
-    if task_type == "regression":
-        metrics = calculate_regression_metrics(yeval, ypred)
-        # Calculate residuals only for regression
-        residuals = calculate_residuals(yeval, ypred)
-    else:
-        metrics = calculate_classification_metrics(yeval, ypred)
-        # For classification, residuals will be created from comparison
-        residuals = None
-
     # Convert to narwhals for consistent handling
     xeval_nw = nw.from_native(xeval)
     yeval_nw = nw.from_native(yeval, series_only=True)
     ypred_nw = nw.from_native(ypred, series_only=True)
+
+    # Check number of columns and warn if > 10
+    n_cols = len(xeval_nw.columns)  # type: ignore[attr-defined]
+    if n_cols > 10:
+        print(
+            f"Warning: {n_cols} columns detected (> 10). Consider clipping to top features for better visibility."
+        )
+
+    # Check number of rows and cap to 1000 with sampling
+    n_rows = xeval_nw.shape[0]  # type: ignore[attr-defined]
+    if n_rows > 1000:
+        print(f"Auto-capping rows to 1000 (original: {n_rows}). Sampling uniformly across dataset.")
+        indices = sorted(random.sample(range(n_rows), 1000))
+        xeval_nw = xeval_nw[indices]  # type: ignore[index]
+        yeval_nw = yeval_nw[indices]  # type: ignore[index]
+        ypred_nw = ypred_nw[indices]  # type: ignore[index]
+
+    # Detect task type
+    task_type = detect_task_type(yeval_nw)
+
+    # Calculate metrics
+    if task_type == "regression":
+        metrics = calculate_regression_metrics(yeval_nw, ypred_nw)
+        # Calculate residuals only for regression
+        residuals = calculate_residuals(yeval_nw, ypred_nw)
+    else:
+        metrics = calculate_classification_metrics(yeval_nw, ypred_nw)
+        # For classification, residuals will be created from comparison
+        residuals = None
 
     # Create residuals for classification if not already created
     if residuals is None:
@@ -109,6 +126,7 @@ def run(
     }
 
     if show:
+        print("Launching web interface...")
         app = Flask(__name__)
 
         @app.route("/")
