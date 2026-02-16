@@ -184,7 +184,7 @@
                         {% for row in table_data %}
                         <tr>
                             {% for col in columns %}
-                            <td>{{ "%.6f"|format(row[col]) if row[col] is number else row[col] }}</td>
+                            <td>{{ "%.2f"|format(row[col]) if row[col] is number else row[col] }}</td>
                             {% endfor %}
                         </tr>
                         {% endfor %}
@@ -197,7 +197,7 @@
                 {% for metric_name, metric_value in metrics.items() %}
                 <div class="metric">
                     <div class="metric-label">{{ metric_name }}</div>
-                    <div class="metric-value">{{ "%.6f"|format(metric_value) }}</div>
+                    <div class="metric-value">{{ "%.2f"|format(metric_value) }}</div>
                 </div>
                 {% endfor %}
             </div>

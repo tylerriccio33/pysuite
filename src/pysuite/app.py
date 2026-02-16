@@ -62,17 +62,23 @@ def run(
     # Calculate metrics
     if task_type == "regression":
         metrics = calculate_regression_metrics(yeval, ypred)
+        # Calculate residuals only for regression
+        residuals = calculate_residuals(yeval, ypred)
     else:
         metrics = calculate_classification_metrics(yeval, ypred)
-
-    # Calculate residuals
-    residuals = calculate_residuals(yeval, ypred)
+        # For classification, residuals will be created from comparison
+        residuals = None
 
     # Convert to narwhals for consistent handling
     xeval_nw = nw.from_native(xeval)
     yeval_nw = nw.from_native(yeval, series_only=True)
     ypred_nw = nw.from_native(ypred, series_only=True)
-    residuals_nw = nw.from_native(residuals, series_only=True)
+
+    # Create residuals for classification if not already created
+    if residuals is None:
+        residuals_nw = (yeval_nw != ypred_nw).cast(nw.Int64)
+    else:
+        residuals_nw = nw.from_native(residuals, series_only=True)
 
     # Build result table using narwhals
     result_table = xeval_nw.with_columns(  # type: ignore[attr-defined]

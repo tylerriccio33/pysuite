@@ -58,9 +58,9 @@ def sample_classification_data():
     }
     xeval = pl.DataFrame(feature_data)
 
-    # Create classifications
-    y_true = [random.choice([0, 1, 2]) for _ in range(n_samples)]
-    y_pred = [random.choice([0, 1, 2]) for _ in range(n_samples)]
+    # Create classifications using string labels to ensure classification detection
+    y_true = [random.choice(["class_0", "class_1", "class_2"]) for _ in range(n_samples)]
+    y_pred = [random.choice(["class_0", "class_1", "class_2"]) for _ in range(n_samples)]
 
     yeval = pl.Series(y_true)
     ypred = pl.Series(y_pred)
@@ -85,10 +85,25 @@ def test_regression_report(sample_regression_data):
     assert "table_data" in report
     assert "columns" in report
 
-    # Check metrics contain expected keys
-    expected_metrics = ["MAE", "MSE", "RMSE", "R²", "Mean Residual"]
+    # Check metrics contain expected keys (both original and new metrics)
+    expected_metrics = [
+        "MAE",
+        "MSE",
+        "RMSE",
+        "R²",
+        "Mean Residual",
+        "MAPE",
+        "MedAE",
+        "MaxError",
+        "Explained Variance",
+        "MSLE",
+        "Median Residual",
+        "Residual Std Dev",
+        "Q1 Residual",
+        "Q3 Residual",
+    ]
     for metric in expected_metrics:
-        assert metric in report["metrics"]
+        assert metric in report["metrics"], f"Missing metric: {metric}"
 
     # Check table has data
     assert len(report["table_data"]) > 0
@@ -112,10 +127,27 @@ def test_classification_report(sample_classification_data):
     assert "table_data" in report
     assert "columns" in report
 
-    # Check metrics contain expected keys
-    expected_metrics = ["Accuracy", "Precision", "Recall", "F1 Score"]
+    # Check metrics contain expected keys (both original and new metrics)
+    expected_metrics = [
+        "Accuracy",
+        "Precision",
+        "Recall",
+        "F1 Score",
+        "Macro Precision",
+        "Macro Recall",
+        "Macro F1",
+        "Micro Precision",
+        "Micro Recall",
+        "Micro F1",
+        "Weighted Precision",
+        "Weighted Recall",
+        "Weighted F1",
+        "Balanced Accuracy",
+        "Matthews Correlation Coefficient",
+        "Cohen's Kappa",
+    ]
     for metric in expected_metrics:
-        assert metric in report["metrics"]
+        assert metric in report["metrics"], f"Missing metric: {metric}"
 
     # Check table has data
     assert len(report["table_data"]) > 0
