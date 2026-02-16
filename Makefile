@@ -13,6 +13,10 @@ test: ## Run tests
 example: ## Run the example web app with sample data
 	@uv run example.py
 
+
+pre-commit: ## Run pre-commit hooks on all files
+	@uv run pre-commit run --all-files
+
 .PHONY: help
 help:  ## Display this help screen
 	@echo -e "\033[1mAvailable commands:\033[0m"
