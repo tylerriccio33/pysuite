@@ -1,7 +1,7 @@
 """Flask web application for model reporting."""
 
 import random
-from typing import Any
+from typing import Any, overload
 
 import narwhals as nw
 from flask import Flask, render_template
@@ -15,19 +15,31 @@ from pysuite.metrics import (
 )
 
 
+@overload
 def run(
-    xeval: IntoFrame, yeval: IntoSeries, ypred: IntoSeries, show: bool = False
+    xeval: IntoFrame, yeval: IntoSeries, ypred: IntoSeries, show: bool = ...
+) -> dict[str, Any]: ...
+
+
+@overload
+def run(xeval: IntoFrame, yeval: str, ypred: str, show: bool = ...) -> dict[str, Any]: ...
+
+
+def run(
+    xeval: IntoFrame, yeval: IntoSeries | str, ypred: IntoSeries | str, show: bool = False
 ) -> dict[str, Any]:
     """Compute model performance metrics and table.
 
     Parameters
     ----------
     xeval : IntoFrame
-        Feature matrix (DataFrame-like, compatible with narwhals)
-    yeval : IntoSeries
-        True target values (Series-like, compatible with narwhals)
-    ypred : IntoSeries
-        Predicted target values (Series-like, compatible with narwhals)
+        Feature matrix (DataFrame-like, compatible with narwhals).
+        When yeval and ypred are strings, this DataFrame must contain
+        those columns; they will be extracted and dropped from xeval.
+    yeval : IntoSeries or str
+        True target values, or column name in xeval.
+    ypred : IntoSeries or str
+        Predicted target values, or column name in xeval.
     show : bool, optional
         If True, launch Flask web interface. Default is False.
 
@@ -57,10 +69,20 @@ def run(
     True
 
     """
-    # Convert to narwhals for consistent handling
-    xeval_nw = nw.from_native(xeval)
-    yeval_nw = nw.from_native(yeval, series_only=True)
-    ypred_nw = nw.from_native(ypred, series_only=True)
+    # Handle string column references
+    if isinstance(yeval, str) and isinstance(ypred, str):
+        xeval_nw = nw.from_native(xeval)
+        yeval_nw = xeval_nw[yeval]  # type: ignore[index]
+        ypred_nw = xeval_nw[ypred]  # type: ignore[index]
+        xeval_nw = xeval_nw.drop(yeval, ypred)  # type: ignore[attr-defined]
+    elif isinstance(yeval, str) or isinstance(ypred, str):
+        msg = "yeval and ypred must both be strings or both be Series"
+        raise TypeError(msg)
+    else:
+        # Convert to narwhals for consistent handling
+        xeval_nw = nw.from_native(xeval)
+        yeval_nw = nw.from_native(yeval, series_only=True)
+        ypred_nw = nw.from_native(ypred, series_only=True)
 
     # Check number of columns and warn if > 10
     n_cols = len(xeval_nw.columns)  # type: ignore[attr-defined]

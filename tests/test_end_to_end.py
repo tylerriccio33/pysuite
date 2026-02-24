@@ -190,6 +190,58 @@ def test_report_table_structure(sample_regression_data):
             assert col in row
 
 
+def test_run_with_string_columns():
+    """Test run() with string column references into a single DataFrame."""
+    n = 100
+    df = pl.DataFrame(
+        {
+            "feature_0": [float(i) for i in range(n)],
+            "feature_1": [float(i) * 2 for i in range(n)],
+            "actual": [float(i) + 50 for i in range(n)],
+            "predicted": [float(i) + 50.5 for i in range(n)],
+        }
+    )
+    report = run(df, "actual", "predicted")
+
+    assert report["task_type"] == "regression"
+    assert "MAE" in report["metrics"]
+    assert len(report["table_data"]) == n
+    # actual and predicted should be extracted, not in feature columns
+    assert "actual" not in report["columns"]
+    assert "predicted" not in report["columns"]
+    assert "feature_0" in report["columns"]
+    assert "pred" in report["columns"]
+    assert "real" in report["columns"]
+
+
+def test_run_with_string_columns_classification():
+    """Test run() with string column references for classification."""
+    n = 100
+    random.seed(42)
+    df = pl.DataFrame(
+        {
+            "feature_0": [random.gauss(0, 1) for _ in range(n)],
+            "y_true": [random.choice(["a", "b"]) for _ in range(n)],
+            "y_pred": [random.choice(["a", "b"]) for _ in range(n)],
+        }
+    )
+    report = run(df, "y_true", "y_pred")
+
+    assert report["task_type"] == "classification"
+    assert "Accuracy" in report["metrics"]
+    assert "y_true" not in report["columns"]
+    assert "y_pred" not in report["columns"]
+
+
+def test_run_mixed_string_series_raises():
+    """Test that mixing string and Series args raises TypeError."""
+    df = pl.DataFrame({"x": [1.0], "y": [1.0]})
+    with pytest.raises(TypeError, match="must both be strings"):
+        run(df, "y", pl.Series([1.0]))
+    with pytest.raises(TypeError, match="must both be strings"):
+        run(df, pl.Series([1.0]), "y")
+
+
 def test_example_regression_data():
     """Test the example regression data from main.py works correctly."""
     # Generate sample regression data (from main.py)
