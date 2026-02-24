@@ -237,9 +237,9 @@ def test_run_mixed_string_series_raises():
     """Test that mixing string and Series args raises TypeError."""
     df = pl.DataFrame({"x": [1.0], "y": [1.0]})
     with pytest.raises(TypeError, match="must both be strings"):
-        run(df, "y", pl.Series([1.0]))
+        run(df, "y", pl.Series([1.0]))  # ty: ignore[no-matching-overload]
     with pytest.raises(TypeError, match="must both be strings"):
-        run(df, pl.Series([1.0]), "y")
+        run(df, pl.Series([1.0]), "y")  # ty: ignore[no-matching-overload]
 
 
 def test_example_regression_data():

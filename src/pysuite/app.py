@@ -72,8 +72,8 @@ def run(
     # Handle string column references
     if isinstance(yeval, str) and isinstance(ypred, str):
         xeval_nw = nw.from_native(xeval)
-        yeval_nw = xeval_nw[yeval]  # type: ignore[index]
-        ypred_nw = xeval_nw[ypred]  # type: ignore[index]
+        yeval_nw = xeval_nw[yeval]
+        ypred_nw = xeval_nw[ypred]
         xeval_nw = xeval_nw.drop(yeval, ypred)  # type: ignore[attr-defined]
     elif isinstance(yeval, str) or isinstance(ypred, str):
         msg = "yeval and ypred must both be strings or both be Series"
@@ -92,13 +92,13 @@ def run(
         )
 
     # Check number of rows and cap to 1000 with sampling
-    n_rows = xeval_nw.shape[0]  # type: ignore[attr-defined]
+    n_rows = xeval_nw.shape[0]
     if n_rows > 1000:
         print(f"Auto-capping rows to 1000 (original: {n_rows}). Sampling uniformly across dataset.")
         indices = sorted(random.sample(range(n_rows), 1000))
-        xeval_nw = xeval_nw[indices]  # type: ignore[index]
-        yeval_nw = yeval_nw[indices]  # type: ignore[index]
-        ypred_nw = ypred_nw[indices]  # type: ignore[index]
+        xeval_nw = xeval_nw[indices]
+        yeval_nw = yeval_nw[indices]
+        ypred_nw = ypred_nw[indices]
 
     # Detect task type
     task_type = detect_task_type(yeval_nw)
