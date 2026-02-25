@@ -14,7 +14,7 @@ pip install git+https://github.com/yourusername/pysuite.git
 
 ```python
 import polars as pl
-from pysuite import run
+from pysuite import run, show
 
 # Create sample data
 xeval = pl.DataFrame({
@@ -27,8 +27,10 @@ ypred = pl.Series([10.5, 19.8, 30.2])
 # Get report as dict
 report = run(xeval, yeval, ypred)
 
-# Or launch web interface
-run(xeval, yeval, ypred, show=True)
+# Launch web interface — pick your style:
+run(xeval, yeval, ypred, show=True)  # functional
+report.show()                         # method on result
+show(report)                          # standalone function
 ```
 
 ## What It Does
@@ -39,11 +41,3 @@ run(xeval, yeval, ypred, show=True)
 - **Optionally displays** a Flask web interface for viewing reports
 
 Works with Polars, Pandas, and other dataframe libraries via [narwhals](https://github.com/narwhals-dev/narwhals).
-
-## Testing
-
-Run doctests with pytest:
-
-```bash
-pytest --doctest-modules src/
-```

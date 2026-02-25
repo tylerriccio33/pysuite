@@ -5,7 +5,7 @@ import random
 import polars as pl
 import pytest
 
-from pysuite.app import run
+from pysuite.app import ReportData, run, show
 
 
 @pytest.fixture
@@ -311,3 +311,77 @@ def test_example_regression_data():
     assert "table_data" in report
     assert "columns" in report
     assert len(report["table_data"]) == n_samples
+
+
+def test_run_returns_report_data(sample_regression_data):
+    """Test that run() returns a ReportData instance (dict subclass)."""
+    xeval, yeval, ypred = sample_regression_data
+    report = run(xeval, yeval, ypred)
+
+    assert isinstance(report, ReportData)
+    assert isinstance(report, dict)
+    assert report["task_type"] == "regression"
+
+
+def test_report_data_show_method(sample_regression_data, monkeypatch):
+    """Test that ReportData.show() launches the Flask app."""
+    xeval, yeval, ypred = sample_regression_data
+    report = run(xeval, yeval, ypred)
+
+    launched = {}
+
+    def fake_launch(data):
+        launched["called"] = True
+        launched["data"] = data
+
+    monkeypatch.setattr("pysuite.app._launch_app", fake_launch)
+    report.show()
+
+    assert launched["called"] is True
+    assert launched["data"] is report
+
+
+def test_standalone_show(sample_regression_data, monkeypatch):
+    """Test that the standalone show() function launches the Flask app."""
+    xeval, yeval, ypred = sample_regression_data
+    report = run(xeval, yeval, ypred)
+
+    launched = {}
+
+    def fake_launch(data):
+        launched["called"] = True
+        launched["data"] = data
+
+    monkeypatch.setattr("pysuite.app._launch_app", fake_launch)
+    show(report)
+
+    assert launched["called"] is True
+    assert launched["data"] is report
+
+
+def test_run_show_arg(sample_regression_data, monkeypatch):
+    """Test that run(show=True) launches the Flask app."""
+    xeval, yeval, ypred = sample_regression_data
+
+    launched = {}
+
+    def fake_launch(data):
+        launched["called"] = True
+
+    monkeypatch.setattr("pysuite.app._launch_app", fake_launch)
+    report = run(xeval, yeval, ypred, show=True)
+
+    assert launched["called"] is True
+    assert isinstance(report, ReportData)
+
+
+def test_report_data_dict_compatibility(sample_classification_data):
+    """Test that ReportData works like a normal dict."""
+    xeval, yeval, ypred = sample_classification_data
+    report = run(xeval, yeval, ypred)
+
+    # Standard dict operations
+    assert list(report.keys()) == ["task_type", "metrics", "table_data", "columns", "plot_data"]
+    assert len(report) == 5
+    assert "task_type" in report
+    assert report.get("nonexistent", "default") == "default"

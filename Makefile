@@ -6,6 +6,7 @@ lint: ## Run ruff and typer
 
 test: ## Run tests
 	@uv run --no-sync pytest \
+		--doctest-modules src \
 		--cov src \
 		--cov-report term-missing \
 		--durations 10

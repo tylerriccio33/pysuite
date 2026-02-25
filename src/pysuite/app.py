@@ -15,19 +15,67 @@ from pysuite.metrics import (
 )
 
 
-@overload
-def run(
-    xeval: IntoFrame, yeval: IntoSeries, ypred: IntoSeries, show: bool = ...
-) -> dict[str, Any]: ...
+def _launch_app(report_data: dict[str, Any]) -> None:
+    """Launch the Flask web interface for a report."""
+    print("Launching web interface...")
+    app = Flask(__name__)
+
+    @app.route("/")
+    def index() -> str:
+        return render_template(
+            "report.html",
+            task_type=report_data["task_type"],
+            metrics=report_data["metrics"],
+            table_data=report_data["table_data"],
+            columns=report_data["columns"],
+            plot_data=report_data["plot_data"],
+        )
+
+    app.run(debug=False)
+
+
+class ReportData(dict[str, Any]):
+    """Dictionary subclass returned by ``run()`` with a ``show()`` method."""
+
+    def show(self) -> None:
+        """Launch the Flask web interface to view this report."""
+        _launch_app(self)
+
+
+def show(report_data: dict[str, Any]) -> None:
+    """Launch the Flask web interface for a report dictionary.
+
+    Parameters
+    ----------
+    report_data : dict[str, Any]
+        A report dictionary as returned by ``run()``.
+
+    Examples
+    --------
+    >>> import polars as pl
+    >>> from pysuite import run, show
+    >>> xeval = pl.DataFrame({"x": [float(i) for i in range(100)]})
+    >>> yeval = pl.Series([float(i) for i in range(100)])
+    >>> ypred = pl.Series([float(i) + 0.5 for i in range(100)])
+    >>> report = run(xeval, yeval, ypred)
+    >>> callable(show)
+    True
+
+    """
+    _launch_app(report_data)
 
 
 @overload
-def run(xeval: IntoFrame, yeval: str, ypred: str, show: bool = ...) -> dict[str, Any]: ...
+def run(xeval: IntoFrame, yeval: IntoSeries, ypred: IntoSeries, show: bool = ...) -> ReportData: ...
+
+
+@overload
+def run(xeval: IntoFrame, yeval: str, ypred: str, show: bool = ...) -> ReportData: ...
 
 
 def run(
     xeval: IntoFrame, yeval: IntoSeries | str, ypred: IntoSeries | str, show: bool = False
-) -> dict[str, Any]:
+) -> ReportData:
     """Compute model performance metrics and table.
 
     Parameters
@@ -45,12 +93,15 @@ def run(
 
     Returns
     -------
-    dict[str, Any]
-        Dictionary containing:
+    ReportData
+        A dict subclass containing:
         - task_type: "regression" or "classification"
         - metrics: Dict of performance metrics
         - table_data: List of dicts with predictions, actuals, residuals, and features
         - columns: Ordered list of column names
+        - plot_data: Data for visualizations
+
+        Call ``.show()`` on the result to launch the web interface.
 
     Examples
     --------
@@ -66,6 +117,13 @@ def run(
     >>> len(report["table_data"]) == 100
     True
     >>> set(report["columns"]) == {"pred", "real", "resid", "x"}
+    True
+
+    The result is a ``ReportData`` instance that supports ``.show()``:
+
+    >>> isinstance(report, ReportData)
+    True
+    >>> hasattr(report, "show")
     True
 
     """
@@ -156,29 +214,15 @@ def run(
             matrix[label_to_idx[r]][label_to_idx[p]] += 1
         plot_data = {"labels": [str(lab) for lab in labels], "matrix": matrix}
 
-    report_data = {
-        "task_type": task_type,
-        "metrics": metrics,
-        "table_data": table_data,
-        "columns": ordered_cols,
-        "plot_data": plot_data,
-    }
+    report_data = ReportData(
+        task_type=task_type,
+        metrics=metrics,
+        table_data=table_data,
+        columns=ordered_cols,
+        plot_data=plot_data,
+    )
 
     if show:
-        print("Launching web interface...")
-        app = Flask(__name__)
-
-        @app.route("/")
-        def index() -> str:
-            return render_template(
-                "report.html",
-                task_type=report_data["task_type"],
-                metrics=report_data["metrics"],
-                table_data=report_data["table_data"],
-                columns=report_data["columns"],
-                plot_data=report_data["plot_data"],
-            )
-
-        app.run(debug=False)
+        report_data.show()
 
     return report_data
