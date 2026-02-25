@@ -140,11 +140,28 @@ def run(
     else:
         table_data = native_result.to_dict(orient="records")
 
+    # Build plot data
+    if task_type == "regression":
+        real_list = yeval_nw.to_list()
+        pred_list = ypred_nw.to_list()
+        plot_data = {"real": real_list, "pred": pred_list}
+    else:
+        # Build confusion matrix
+        real_list = yeval_nw.to_list()
+        pred_list = ypred_nw.to_list()
+        labels = sorted(set(real_list) | set(pred_list))
+        label_to_idx = {label: i for i, label in enumerate(labels)}
+        matrix = [[0] * len(labels) for _ in labels]
+        for r, p in zip(real_list, pred_list):
+            matrix[label_to_idx[r]][label_to_idx[p]] += 1
+        plot_data = {"labels": [str(lab) for lab in labels], "matrix": matrix}
+
     report_data = {
         "task_type": task_type,
         "metrics": metrics,
         "table_data": table_data,
         "columns": ordered_cols,
+        "plot_data": plot_data,
     }
 
     if show:
@@ -159,6 +176,7 @@ def run(
                 metrics=report_data["metrics"],
                 table_data=report_data["table_data"],
                 columns=report_data["columns"],
+                plot_data=report_data["plot_data"],
             )
 
         app.run(debug=False)

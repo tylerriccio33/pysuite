@@ -15,7 +15,7 @@ def main() -> None:
     xeval = pl.DataFrame(feature_data)
 
     y_true = [float(i) + 50 for i in range(n_samples)]
-    y_pred = [yt + (i * 0.1) for i, yt in enumerate(y_true)]
+    y_pred = [yt + (i * 2) for i, yt in enumerate(y_true)]
 
     yeval = pl.Series(y_true)
     ypred = pl.Series(y_pred)

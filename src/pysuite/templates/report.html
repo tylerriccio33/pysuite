@@ -4,6 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Model Report - Pysuite</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <style>
         * {
             margin: 0;
@@ -49,8 +50,40 @@
             letter-spacing: 1px;
         }
 
-        .content {
+        .tabs {
             display: flex;
+            background: #34495e;
+        }
+
+        .tab {
+            padding: 12px 24px;
+            color: rgba(255,255,255,0.6);
+            cursor: pointer;
+            font-size: 14px;
+            font-weight: 500;
+            border-bottom: 3px solid transparent;
+            transition: all 0.2s;
+        }
+
+        .tab:hover {
+            color: rgba(255,255,255,0.9);
+            background: rgba(255,255,255,0.05);
+        }
+
+        .tab.active {
+            color: white;
+            border-bottom-color: #3498db;
+        }
+
+        .tab-content {
+            display: none;
+        }
+
+        .tab-content.active {
+            display: flex;
+        }
+
+        .content {
             min-height: 600px;
         }
 
@@ -121,18 +154,18 @@
         }
 
         th::after {
-            content: ' ↕';
+            content: ' \2195';
             opacity: 0.3;
             font-size: 10px;
         }
 
         th.sort-asc::after {
-            content: ' ↑';
+            content: ' \2191';
             opacity: 1;
         }
 
         th.sort-desc::after {
-            content: ' ↓';
+            content: ' \2193';
             opacity: 1;
         }
 
@@ -158,6 +191,80 @@
             color: #666;
             font-size: 13px;
         }
+
+        /* Plot tab styles */
+        .plot-container {
+            flex: 0 0 75%;
+            padding: 30px;
+            display: flex;
+            align-items: start;
+            justify-content: center;
+        }
+
+        .chart-wrapper {
+            width: 100%;
+            height: 550px;
+            position: relative;
+        }
+
+        /* Confusion matrix styles */
+        .cm-wrapper {
+            width: 100%;
+            max-width: 600px;
+        }
+
+        .cm-wrapper h3 {
+            text-align: center;
+            margin-bottom: 16px;
+            color: #2c3e50;
+            font-size: 18px;
+        }
+
+        .cm-table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+
+        .cm-table th, .cm-table td {
+            padding: 12px 16px;
+            text-align: center;
+            cursor: default;
+        }
+
+        .cm-table th {
+            position: static;
+        }
+
+        .cm-table th::after {
+            content: '';
+        }
+
+        .cm-corner {
+            background: #2c3e50;
+            color: rgba(255,255,255,0.7);
+            font-size: 11px;
+        }
+
+        .cm-cell {
+            font-weight: 600;
+            font-size: 18px;
+            border: 1px solid #e0e0e0;
+        }
+
+        .cm-axis-label {
+            font-size: 13px;
+            color: #666;
+            text-align: center;
+            margin-top: 8px;
+        }
+
+        .cm-axis-label.y-label {
+            writing-mode: vertical-rl;
+            transform: rotate(180deg);
+            position: absolute;
+            left: -30px;
+            top: 50%;
+        }
     </style>
 </head>
 <body>
@@ -167,7 +274,12 @@
             <span class="task-type">{{ task_type }}</span>
         </div>
 
-        <div class="content">
+        <div class="tabs">
+            <div class="tab active" onclick="switchTab('data')">Data</div>
+            <div class="tab" onclick="switchTab('plot')">Plot</div>
+        </div>
+
+        <div id="tab-data" class="tab-content active content">
             <div class="table-container">
                 <div class="table-info">
                     <strong>{{ table_data|length }}</strong> samples | Click column headers to sort
@@ -202,9 +314,63 @@
                 {% endfor %}
             </div>
         </div>
+
+        <div id="tab-plot" class="tab-content content">
+            <div class="plot-container">
+                {% if task_type == 'regression' %}
+                <div class="chart-wrapper">
+                    <canvas id="scatterChart"></canvas>
+                </div>
+                {% else %}
+                <div class="cm-wrapper">
+                    <h3>Confusion Matrix</h3>
+                    <table class="cm-table">
+                        <thead>
+                            <tr>
+                                <th class="cm-corner">Real \ Pred</th>
+                                {% for label in plot_data.labels %}
+                                <th>{{ label }}</th>
+                                {% endfor %}
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for i in range(plot_data.labels|length) %}
+                            <tr>
+                                <th>{{ plot_data.labels[i] }}</th>
+                                {% for j in range(plot_data.labels|length) %}
+                                <td class="cm-cell" id="cm-{{ i }}-{{ j }}">{{ plot_data.matrix[i][j] }}</td>
+                                {% endfor %}
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                    <div class="cm-axis-label">Predicted</div>
+                </div>
+                {% endif %}
+            </div>
+
+            <div class="metrics-panel">
+                <h2>Metrics</h2>
+                {% for metric_name, metric_value in metrics.items() %}
+                <div class="metric">
+                    <div class="metric-label">{{ metric_name }}</div>
+                    <div class="metric-value">{{ "%.2f"|format(metric_value) }}</div>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
     </div>
 
     <script>
+        // Tab switching
+        function switchTab(tabName) {
+            document.querySelectorAll('.tab-content').forEach(el => el.classList.remove('active'));
+            document.querySelectorAll('.tab').forEach(el => el.classList.remove('active'));
+            document.getElementById('tab-' + tabName).classList.add('active');
+            document.querySelectorAll('.tab')[tabName === 'data' ? 0 : 1].classList.add('active');
+        }
+
+        // Table sorting
         let sortDirections = {};
 
         function sortTable(columnIndex) {
@@ -213,7 +379,6 @@
             const rows = Array.from(tbody.querySelectorAll('tr'));
             const headers = table.querySelectorAll('th');
 
-            // Determine sort direction
             const currentDirection = sortDirections[columnIndex] || 'none';
             let newDirection;
             if (currentDirection === 'none' || currentDirection === 'desc') {
@@ -223,7 +388,6 @@
             }
             sortDirections[columnIndex] = newDirection;
 
-            // Update header classes
             headers.forEach((header, idx) => {
                 header.classList.remove('sort-asc', 'sort-desc');
                 if (idx === columnIndex) {
@@ -231,12 +395,10 @@
                 }
             });
 
-            // Sort rows
             rows.sort((a, b) => {
                 const aValue = a.cells[columnIndex].textContent.trim();
                 const bValue = b.cells[columnIndex].textContent.trim();
 
-                // Try numeric comparison first
                 const aNum = parseFloat(aValue);
                 const bNum = parseFloat(bValue);
 
@@ -250,9 +412,88 @@
                 return newDirection === 'asc' ? comparison : -comparison;
             });
 
-            // Re-append sorted rows
             rows.forEach(row => tbody.appendChild(row));
         }
+
+        {% if task_type == 'regression' %}
+        // Scatter plot with regression line
+        const realData = {{ plot_data.real | tojson }};
+        const predData = {{ plot_data.pred | tojson }};
+
+        // Build scatter points
+        const scatterPoints = realData.map((r, i) => ({ x: r, y: predData[i] }));
+
+        // Compute regression line (least squares: pred = a*real + b)
+        const n = realData.length;
+        const sumX = realData.reduce((s, v) => s + v, 0);
+        const sumY = predData.reduce((s, v) => s + v, 0);
+        const sumXY = realData.reduce((s, v, i) => s + v * predData[i], 0);
+        const sumX2 = realData.reduce((s, v) => s + v * v, 0);
+        const slope = (n * sumXY - sumX * sumY) / (n * sumX2 - sumX * sumX);
+        const intercept = (sumY - slope * sumX) / n;
+
+        const minX = Math.min(...realData);
+        const maxX = Math.max(...realData);
+        const linePoints = [
+            { x: minX, y: slope * minX + intercept },
+            { x: maxX, y: slope * maxX + intercept }
+        ];
+
+        new Chart(document.getElementById('scatterChart'), {
+            type: 'scatter',
+            data: {
+                datasets: [
+                    {
+                        label: 'Predictions',
+                        data: scatterPoints,
+                        backgroundColor: 'rgba(52, 152, 219, 0.5)',
+                        pointRadius: 3,
+                    },
+                    {
+                        label: 'Regression Line',
+                        data: linePoints,
+                        type: 'line',
+                        borderColor: '#e74c3c',
+                        borderWidth: 2,
+                        pointRadius: 0,
+                        fill: false,
+                    }
+                ]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    title: {
+                        display: true,
+                        text: 'Real vs Predicted',
+                        font: { size: 18 }
+                    }
+                },
+                scales: {
+                    x: { title: { display: true, text: 'Real' } },
+                    y: { title: { display: true, text: 'Predicted' } }
+                }
+            }
+        });
+        {% else %}
+        // Color confusion matrix cells
+        const matrix = {{ plot_data.matrix | tojson }};
+        const maxVal = Math.max(...matrix.flat());
+        for (let i = 0; i < matrix.length; i++) {
+            for (let j = 0; j < matrix[i].length; j++) {
+                const cell = document.getElementById('cm-' + i + '-' + j);
+                if (cell) {
+                    const intensity = maxVal > 0 ? matrix[i][j] / maxVal : 0;
+                    if (i === j) {
+                        cell.style.background = `rgba(46, 204, 113, ${0.15 + intensity * 0.6})`;
+                    } else {
+                        cell.style.background = `rgba(231, 76, 60, ${0.05 + intensity * 0.5})`;
+                    }
+                }
+            }
+        }
+        {% endif %}
     </script>
 </body>
 </html>

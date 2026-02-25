@@ -154,6 +154,52 @@ def test_classification_report(sample_classification_data):
     assert all(col in report["table_data"][0] for col in ["pred", "real", "resid"])
 
 
+def test_regression_plot_data(sample_regression_data):
+    """Test that regression report contains scatter plot data."""
+    xeval, yeval, ypred = sample_regression_data
+    report = run(xeval, yeval, ypred)
+
+    assert "plot_data" in report
+    plot_data = report["plot_data"]
+    assert "real" in plot_data
+    assert "pred" in plot_data
+    assert len(plot_data["real"]) == len(report["table_data"])
+    assert len(plot_data["pred"]) == len(report["table_data"])
+    assert all(isinstance(v, (int, float)) for v in plot_data["real"])
+    assert all(isinstance(v, (int, float)) for v in plot_data["pred"])
+
+
+def test_classification_plot_data(sample_classification_data):
+    """Test that classification report contains confusion matrix data."""
+    xeval, yeval, ypred = sample_classification_data
+    report = run(xeval, yeval, ypred)
+
+    assert "plot_data" in report
+    plot_data = report["plot_data"]
+    assert "labels" in plot_data
+    assert "matrix" in plot_data
+
+    labels = plot_data["labels"]
+    matrix = plot_data["matrix"]
+
+    # Labels should cover all unique classes
+    assert set(labels) == {"class_0", "class_1", "class_2"}
+
+    # Matrix should be square with dimension == number of labels
+    assert len(matrix) == len(labels)
+    for row in matrix:
+        assert len(row) == len(labels)
+
+    # All matrix values should be non-negative integers
+    for row in matrix:
+        for val in row:
+            assert isinstance(val, int)
+            assert val >= 0
+
+    # Sum of matrix should equal number of samples
+    assert sum(sum(row) for row in matrix) == len(report["table_data"])
+
+
 def test_report_has_columns(sample_regression_data):
     """Test that report includes all expected columns.
 
